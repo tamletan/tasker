@@ -21,7 +21,7 @@ class GetLocale extends GetWidget<LocaleController> {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: controller.timer,
+          onPressed: controller.testBG,
           child: Icon(Icons.update),
         ),
       );

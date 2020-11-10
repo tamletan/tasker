@@ -1,7 +1,4 @@
-import 'dart:isolate';
-import 'dart:ui';
-
-import 'package:android_alarm_manager/android_alarm_manager.dart';
+import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -17,29 +14,20 @@ class LocaleController extends GetxController {
   RxBool isAway = false.obs;
 
   Presenter _presenter = Presenter();
-  final String isolateName = 'isolate';
-  final ReceivePort port = ReceivePort();
-  SendPort uiSendPort;
 
   @override
   void onInit() {
     super.onInit();
-    IsolateNameServer.registerPortWithName(
-      port.sendPort,
-      isolateName,
-    );
-    AndroidAlarmManager.initialize();
-    port.listen((_) => func());
-    // timer();
-    // _presenter.startSV();
-    // _presenter.methodChannel.setMethodCallHandler(_handleMethod);
+    _presenter.startSV();
+    Logger.write(DateFormat.jms().format(DateTime.now()));
+    _presenter.methodChannel.setMethodCallHandler(_handleMethod);
   }
 
-  // Future<void> _handleMethod(MethodCall call) async {
-  //   if (call.method == "locale") {
-  //       func();
-  //   }
-  // }
+  Future<void> _handleMethod(MethodCall call) async {
+    if (call.method == "locale") {
+      func();
+    }
+  }
 
   void getPermission() async {
     bool isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -54,8 +42,7 @@ class LocaleController extends GetxController {
     }
   }
 
-  void getPos() async {
-    Logger.write(DateFormat.jms().format(DateTime.now()));
+  Future<void> getPos() async {
     position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high);
 
@@ -86,38 +73,14 @@ class LocaleController extends GetxController {
   }
 
   void func() async {
-    // await getPos();
+    Logger.write(DateFormat.jms().format(DateTime.now()));
+    await getPos();
     isAway.value = !(home.value == address.value);
     var d = await _presenter.testFunction(isAway.value);
     Logger.write(d);
   }
 
-  void callback() async {
-    Logger.write('Alarm fired!');
-    Logger.write(DateFormat.jms().format(DateTime.now()));
-    position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-
-    try {
-      List<Placemark> p =
-      await placemarkFromCoordinates(position.latitude, position.longitude);
-      Placemark place = p[0];
-      address.value =
-      "${place.street}, ${place.administrativeArea}, ${place.country}";
-    } catch (e) {
-      print(e);
-    }
-    uiSendPort ??= IsolateNameServer.lookupPortByName(isolateName);
-    uiSendPort?.send(null);
+  void testBG() async {
+    _presenter.stopSV();
   }
-
-  void timer() async {
-    Logger.write(DateFormat.jms().format(DateTime.now()));
-    await AndroidAlarmManager.periodic(const Duration(minutes: 1), 0, callback,
-        exact: true, wakeup: true);
-  }
-
-// void testBG() async {
-//   _presenter.stopSV();
-// }
 }
